@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">Test App</string>
+    <string name="login_header_title">Hello</string>
+    <string name="login_header_subtitle">Welcome Back!</string>
+    <string name="login_form_title">Login Account</string>
+    <string name="login_form_description">Enter your email address and password to continue.</string>
+    <string name="join_us">Join Us</string>
+    <string name="create_free_account">Create Free Account</string>
+    <string name="personal_info">Personal Info</string>
+    <string name="personal_info_description">Provide your full name and email address to start creating your account.</string>
+    <string name="secure_account">Secure Account</string>
+    <string name="secure_account_description">Create a strong password to finish setting up your account.</string>
+    <string name="secure_account_helper">Creating account for %1$s</string>
+    <string name="email_address">Email Address</string>
+    <string name="email_placeholder">Your Email Address</string>
+    <string name="password">Password</string>
+    <string name="password_placeholder">Enter Your Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="confirm_password_placeholder">Re-enter Your Password</string>
+    <string name="full_name">Full Name</string>
+    <string name="full_name_placeholder">Enter Your Full Name</string>
+    <string name="save_password">Save Password</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="login_account">Login Account</string>
+    <string name="create_new_account">Create New Account</string>
+    <string name="save_continue">Save &amp; Continue</string>
+    <string name="back_to_login">Back to Login</string>
+    <string name="back_to_personal_info">Back to Personal Info</string>
+    <string name="create_account">Create Account</string>
+    <string name="show_password">Show</string>
+    <string name="hide_password">Hide</string>
+    <string name="account_created">Account created successfully.</string>
+    <string name="login_successful">Login successful.</string>
+    <string name="password_reset_success">A password reset email has been sent.</string>
+    <string name="checking_session">Checking your session...</string>
+    <string name="welcome_user">Welcome, %1$s!</string>
+    <string name="account_opened">Your account screen opened successfully.</string>
+    <string name="signed_in_as">Signed in as %1$s</string>
+    <string name="logout">Logout</string>
+    <string name="notification_channel_name">General notifications</string>
+
+    <string name="notification_channel_description">
+    Notifications and updates from Test App
+</string>
+
+    <string name="default_notification_channel_id">
+    general_notifications
+</string>
+
+    <string name="default_notification_body">
+    You received a new notification.
+</string>
+
+    <string name="notification_test_title">
+    Firebase notification test
+</string>
+
+    <string name="notification_permission_allowed">
+    Notification permission: Allowed
+</string>
+
+    <string name="notification_permission_not_allowed">
+    Notification permission: Not allowed
+</string>
+
+    <string name="enable_notifications">
+    Enable notifications
+</string>
+
+    <string name="fcm_token_title">
+    FCM test token
+</string>
+
+    <string name="loading_fcm_token">
+    Loading FCM token…
+</string>
+
+    <string name="refresh_token">
+    Refresh token
+</string>
+
+    <string name="copy_token">
+    Copy token
+</string>
+
+    <string name="token_copied">
+    FCM token copied
+</string>
+
+    <string name="fcm_token_error">
+    Unable to retrieve the FCM token.
+</string>
+</resources>

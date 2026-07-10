@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "339973805052",
+    "project_id": "test786786",
+    "storage_bucket": "test786786.fizrebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339973805052:android:76220953aa082a77385879",
+        "android_client_info": {
+          "package_name": "com.nexappra.testapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEV3X_pfQY2IQwsau1uOA6SrioIUZhlvI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
