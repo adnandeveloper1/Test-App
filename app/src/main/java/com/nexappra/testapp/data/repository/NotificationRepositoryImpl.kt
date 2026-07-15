@@ -21,32 +21,32 @@ class NotificationRepositoryImpl @Inject constructor(
                         return@addOnCompleteListener
                     }
 
-                    if (task.isSuccessful) {
-                        val token = task.result
+                    val result: Result<String> = when {
+                        task.isSuccessful &&
+                                !task.result.isNullOrBlank() -> {
 
-                        if (token.isNullOrBlank()) {
-                            continuation.resume(
-                                Result.failure(
-                                    IllegalStateException(
-                                        "Firebase returned an empty FCM token."
-                                    )
+                            Result.success(task.result)
+                        }
+
+                        task.isSuccessful -> {
+                            Result.failure(
+                                IllegalStateException(
+                                    "Firebase returned an empty FCM token."
                                 )
                             )
-                        } else {
-                            continuation.resume(
-                                Result.success(token)
-                            )
                         }
-                    } else {
-                        continuation.resume(
+
+                        else -> {
                             Result.failure(
                                 task.exception
                                     ?: IllegalStateException(
                                         "Unable to retrieve FCM token."
                                     )
                             )
-                        )
+                        }
                     }
+
+                    continuation.resume(result)
                 }
         }
     }

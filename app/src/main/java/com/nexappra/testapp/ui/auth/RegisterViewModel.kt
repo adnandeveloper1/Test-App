@@ -5,24 +5,29 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexappra.testapp.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AuthUiState())
+    private val _uiState = MutableStateFlow(
+        AuthUiState(
+            currentStep = RegisterStep.PersonalInfo
+        )
+    )
+
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun onNameChange(name: String) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 name = name,
                 nameError = null,
                 errorMessage = null
@@ -31,8 +36,8 @@ class RegisterViewModel @Inject constructor(
     }
 
     fun onEmailChange(email: String) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 email = email,
                 emailError = null,
                 errorMessage = null
@@ -41,18 +46,19 @@ class RegisterViewModel @Inject constructor(
     }
 
     fun onPasswordChange(password: String) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 password = password,
                 passwordError = null,
+                confirmPasswordError = null,
                 errorMessage = null
             )
         }
     }
 
     fun onConfirmPasswordChange(confirmPassword: String) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 confirmPassword = confirmPassword,
                 confirmPasswordError = null,
                 errorMessage = null
@@ -61,12 +67,16 @@ class RegisterViewModel @Inject constructor(
     }
 
     fun goToSecureAccountStep() {
+        if (_uiState.value.isLoading) {
+            return
+        }
+
         if (!validatePersonalInfo()) {
             return
         }
 
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 currentStep = RegisterStep.SecureAccount,
                 errorMessage = null
             )
@@ -74,21 +84,42 @@ class RegisterViewModel @Inject constructor(
     }
 
     fun goBackToPersonalInfo() {
-        _uiState.update {
-            it.copy(
+        if (_uiState.value.isLoading) {
+            return
+        }
+
+        _uiState.update { currentState ->
+            currentState.copy(
                 currentStep = RegisterStep.PersonalInfo,
+                passwordError = null,
+                confirmPasswordError = null,
                 errorMessage = null
             )
         }
     }
 
     fun createAccount() {
-        if (_uiState.value.isLoading || !validateSecureAccount()) {
+        if (_uiState.value.isLoading) {
             return
         }
 
+        if (!validateSecureAccount()) {
+            return
+        }
+
+        val currentState = _uiState.value
+        val name = currentState.name.trim()
+        val email = currentState.email.trim()
+        val password = currentState.password
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { state ->
+                state.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                    successMessage = null
+                )
+            }
 
             authRepository.createAccount(
                 name = _uiState.value.name.trim(),
@@ -96,19 +127,23 @@ class RegisterViewModel @Inject constructor(
                 password = _uiState.value.password
             ).fold(
                 onSuccess = {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { state ->
+                        state.copy(
                             isLoading = false,
                             isSuccess = true,
-                            successMessage = "Account created successfully."
+                            successMessage = "Account created successfully.",
+                            errorMessage = null
                         )
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { state ->
+                        state.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Unable to create an account right now."
+                            isSuccess = false,
+                            successMessage = null,
+                            errorMessage = error.message
+                                ?: "Unable to create an account right now."
                         )
                     }
                 }
@@ -116,28 +151,52 @@ class RegisterViewModel @Inject constructor(
         }
     }
 
+    fun clearError() {
+        _uiState.update { currentState ->
+            currentState.copy(errorMessage = null)
+        }
+    }
+
     fun onNavigationHandled() {
-        _uiState.update { it.copy(isSuccess = false, successMessage = null) }
+        _uiState.update { currentState ->
+            currentState.copy(
+                isSuccess = false,
+                successMessage = null
+            )
+        }
     }
 
     private fun validatePersonalInfo(): Boolean {
-        val name = _uiState.value.name.trim()
-        val email = _uiState.value.email.trim()
+        val currentState = _uiState.value
+        val name = currentState.name.trim()
+        val email = currentState.email.trim()
 
-        val nameError = if (name.isBlank()) {
-            "Full name is required."
-        } else {
-            null
-        }
+        val nameError = when {
+            name.isBlank() -> {
+                "Full name is required."
+            }
 
-        val emailError = when {
-            email.isBlank() -> "Email is required."
-            !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Please enter a valid email address."
+            name.length < 2 -> {
+                "Full name must contain at least 2 characters."
+            }
+
             else -> null
         }
 
-        _uiState.update {
-            it.copy(
+        val emailError = when {
+            email.isBlank() -> {
+                "Email is required."
+            }
+
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                "Please enter a valid email address."
+            }
+
+            else -> null
+        }
+
+        _uiState.update { state ->
+            state.copy(
                 nameError = nameError,
                 emailError = emailError,
                 errorMessage = null
@@ -148,33 +207,46 @@ class RegisterViewModel @Inject constructor(
     }
 
     private fun validateSecureAccount(): Boolean {
-        if (!validatePersonalInfo()) {
-            return false
-        }
+        val personalInfoValid = validatePersonalInfo()
 
-        val password = _uiState.value.password
-        val confirmPassword = _uiState.value.confirmPassword
+        val currentState = _uiState.value
+        val password = currentState.password
+        val confirmPassword = currentState.confirmPassword
 
         val passwordError = when {
-            password.isBlank() -> "Password is required."
-            password.length < 6 -> "Password must be at least 6 characters."
+            password.isBlank() -> {
+                "Password is required."
+            }
+
+            password.length < 6 -> {
+                "Password must contain at least 6 characters."
+            }
+
             else -> null
         }
 
         val confirmPasswordError = when {
-            confirmPassword.isBlank() -> "Confirm password is required."
-            confirmPassword != password -> "Passwords do not match."
+            confirmPassword.isBlank() -> {
+                "Confirm password is required."
+            }
+
+            confirmPassword != password -> {
+                "Passwords do not match."
+            }
+
             else -> null
         }
 
-        _uiState.update {
-            it.copy(
+        _uiState.update { state ->
+            state.copy(
                 passwordError = passwordError,
                 confirmPasswordError = confirmPasswordError,
                 errorMessage = null
             )
         }
 
-        return passwordError == null && confirmPasswordError == null
+        return personalInfoValid &&
+                passwordError == null &&
+                confirmPasswordError == null
     }
 }
