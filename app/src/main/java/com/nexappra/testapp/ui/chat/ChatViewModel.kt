@@ -1,171 +1,149 @@
 package com.nexappra.testapp.ui.chat
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.nexappra.testapp.data.model.MessageKind
-import com.nexappra.testapp.data.model.MessageUi
+import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class ChatViewModel : ViewModel() {
+@HiltViewModel
+class ChatViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    private val savedContactId: String =
+        savedStateHandle["contactId"] ?: ""
+
+    private val savedContactName: String =
+        savedStateHandle["contactName"] ?: "Contact"
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
+            contactId = savedContactId,
+            contactName = savedContactName,
+            isOnline = true,
             messages = createTemporaryMessages()
         )
     )
 
-    val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<ChatUiState> =
+        _uiState.asStateFlow()
 
-    fun sendMessage(text: String) {
-        val cleanText = text.trim()
+    fun initialize(
+        contactId: String,
+        contactName: String
+    ) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                contactId = contactId,
+                contactName = contactName.ifBlank {
+                    "Contact"
+                }
+            )
+        }
+    }
 
-        if (cleanText.isBlank()) {
+    fun updateDraftMessage(message: String) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                draftMessage = message
+            )
+        }
+    }
+
+    fun sendMessage() {
+        val messageText =
+            _uiState.value.draftMessage.trim()
+
+        if (messageText.isBlank()) {
             return
         }
 
-        val currentTime = System.currentTimeMillis()
-
-        val newMessage = MessageUi(
-            id = UUID.randomUUID().toString(),
-            senderId = CURRENT_USER_ID,
-            receiverId = OTHER_USER_ID,
-            text = cleanText,
-            time = formatMessageTime(currentTime),
-            timestamp = currentTime,
+        val newMessage = ChatMessageUi(
+            id = System.currentTimeMillis().toString(),
+            text = messageText,
+            time = currentTime(),
             isMine = true,
-            kind = MessageKind.TEXT
+            type = ChatMessageType.TEXT
         )
 
         _uiState.update { currentState ->
             currentState.copy(
+                draftMessage = "",
                 messages = currentState.messages + newMessage
             )
         }
     }
 
-    fun addReaction(
-        messageId: String,
-        reaction: String
-    ) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                messages = currentState.messages.map { message ->
-                    if (message.id == messageId) {
-                        message.copy(reaction = reaction)
-                    } else {
-                        message
-                    }
-                }
-            )
-        }
-    }
-
-    fun toggleStar(messageId: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                messages = currentState.messages.map { message ->
-                    if (message.id == messageId) {
-                        message.copy(
-                            starred = !message.starred
-                        )
-                    } else {
-                        message
-                    }
-                }
-            )
-        }
-    }
-
-    fun deleteMessage(messageId: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                messages = currentState.messages.filterNot { message ->
-                    message.id == messageId
-                }
-            )
-        }
-    }
-
-    private fun formatMessageTime(timestamp: Long): String {
+    private fun currentTime(): String {
         return SimpleDateFormat(
             "h:mm a",
             Locale.getDefault()
-        ).format(Date(timestamp))
+        ).format(Date())
     }
 
-    private fun createTemporaryMessages(): List<MessageUi> {
+    private fun createTemporaryMessages(): List<ChatMessageUi> {
         return listOf(
-            MessageUi(
-                id = "1",
-                senderId = OTHER_USER_ID,
-                receiverId = CURRENT_USER_ID,
+            ChatMessageUi(
+                id = "system_1",
+                text = "Messages are end-to-end encrypted",
+                type = ChatMessageType.SYSTEM
+            ),
+            ChatMessageUi(
+                id = "system_2",
+                text = "Missed audio call",
+                type = ChatMessageType.SYSTEM
+            ),
+            ChatMessageUi(
+                id = "system_3",
+                text = "Forwarded",
+                type = ChatMessageType.SYSTEM
+            ),
+            ChatMessageUi(
+                id = "message_1",
                 text = "Hey, are we still on for tomorrow?",
                 time = "9:12 AM",
-                timestamp = 1L,
-                isMine = false,
-                kind = MessageKind.TEXT
+                isMine = false
             ),
-            MessageUi(
-                id = "2",
-                senderId = CURRENT_USER_ID,
-                receiverId = OTHER_USER_ID,
+            ChatMessageUi(
+                id = "message_2",
                 text = "Yes, I’ll send the final notes tonight.",
                 time = "9:14 AM",
-                timestamp = 2L,
-                isMine = true,
-                kind = MessageKind.TEXT
+                isMine = true
             ),
-            MessageUi(
-                id = "3",
-                senderId = OTHER_USER_ID,
-                receiverId = CURRENT_USER_ID,
-                text = "I reviewed the proposal and the timeline looks good. We should probably align on the launch checklist.",
+            ChatMessageUi(
+                id = "message_3",
+                text = "I reviewed the proposal and the timeline looks good. " +
+                        "We should probably align on the launch checklist, " +
+                        "confirm the assets, and make sure the QA pass is complete.",
                 time = "9:18 AM",
-                timestamp = 3L,
+                isMine = false
+            ),
+            ChatMessageUi(
+                id = "message_4",
+                text = "😍 🔥",
+                time = "9:20 AM",
+                isMine = true
+            ),
+            ChatMessageUi(
+                id = "media_1",
+                time = "9:22 AM",
                 isMine = false,
-                kind = MessageKind.TEXT
+                type = ChatMessageType.IMAGE_GRID
             ),
-            MessageUi(
-                id = "4",
-                senderId = CURRENT_USER_ID,
-                receiverId = OTHER_USER_ID,
-                time = "9:21 AM",
-                timestamp = 4L,
-                isMine = true,
-                kind = MessageKind.IMAGE
-            ),
-            MessageUi(
-                id = "5",
-                senderId = OTHER_USER_ID,
-                receiverId = CURRENT_USER_ID,
-                time = "9:24 AM",
-                timestamp = 5L,
+            ChatMessageUi(
+                id = "saved_1",
+                text = "Saved for later",
+                time = "9:23 AM",
                 isMine = false,
-                kind = MessageKind.FILE,
-                fileName = "Priya-Specs_v2.pdf",
-                fileSize = "2.4 MB"
-            ),
-            MessageUi(
-                id = "6",
-                senderId = CURRENT_USER_ID,
-                receiverId = OTHER_USER_ID,
-                time = "9:26 AM",
-                timestamp = 6L,
-                isMine = true,
-                kind = MessageKind.VOICE,
-                duration = "0:31"
+                type = ChatMessageType.SAVED
             )
         )
-    }
-
-    private companion object {
-        const val CURRENT_USER_ID = "me"
-        const val OTHER_USER_ID = "other"
     }
 }

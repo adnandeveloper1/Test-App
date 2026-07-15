@@ -1,9 +1,24 @@
 package com.nexappra.testapp.ui.chat
 
-import com.nexappra.testapp.data.model.MessageUi
+enum class ChatMessageType {
+    TEXT,
+    SYSTEM,
+    IMAGE_GRID,
+    SAVED
+}
+
+data class ChatMessageUi(
+    val id: String,
+    val text: String = "",
+    val time: String = "",
+    val isMine: Boolean = false,
+    val type: ChatMessageType = ChatMessageType.TEXT
+)
 
 data class ChatUiState(
-    val messages: List<MessageUi> = emptyList(),
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val contactId: String = "",
+    val contactName: String = "",
+    val isOnline: Boolean = true,
+    val draftMessage: String = "",
+    val messages: List<ChatMessageUi> = emptyList()
 )

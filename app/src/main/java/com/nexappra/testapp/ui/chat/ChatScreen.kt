@@ -1,32 +1,70 @@
 package com.nexappra.testapp.ui.chat
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.InsertEmoticon
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.nexappra.testapp.data.model.MessageKind
-import com.nexappra.testapp.data.model.MessageUi
 import com.nexappra.testapp.ui.components.AppAvatar
-import com.nexappra.testapp.ui.theme.*
+
+private val ChatGreen = Color(0xFF009F8C)
+private val ChatBackground = Color(0xFFF7F7F8)
+private val ReceivedBubble = Color(0xFFF1F1F2)
+private val SystemBubble = Color(0xFFF1F1F1)
+private val SecondaryText = Color(0xFF74777A)
+private val DividerColor = Color(0xFFE6E6E8)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,87 +74,44 @@ fun ChatScreen(
     onBack: () -> Unit,
     onAudioCall: () -> Unit,
     onVideoCall: () -> Unit,
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
 
-    var selectedMessage by remember {
-        mutableStateOf<MessageUi?>(null)
+    LaunchedEffect(contactId, contactName) {
+        viewModel.initialize(
+            contactId = contactId,
+            contactName = contactName
+        )
+    }
+
+    LaunchedEffect(state.messages.size) {
+        if (state.messages.isNotEmpty()) {
+            listState.animateScrollToItem(
+                state.messages.lastIndex
+            )
+        }
     }
 
     Scaffold(
-        containerColor = NexaBackground,
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
+        containerColor = ChatBackground,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Outlined.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppAvatar(
-                            initials = contactName
-                                .split(" ")
-                                .take(2)
-                                .joinToString("") {
-                                    it.firstOrNull()?.uppercase() ?: ""
-                                },
-                            online = true,
-                            size = 38.dp
-                        )
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Text(
-                                text = contactName,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            Text(
-                                text = "Online",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NexaGreen
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onAudioCall) {
-                        Icon(
-                            imageVector = Icons.Outlined.Call,
-                            contentDescription = "Audio call"
-                        )
-                    }
-
-                    IconButton(onClick = onVideoCall) {
-                        Icon(
-                            imageVector = Icons.Outlined.Videocam,
-                            contentDescription = "Video call"
-                        )
-                    }
-
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "More"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = NexaSurface
-                )
+            ChatTopBar(
+                contactName = state.contactName,
+                isOnline = state.isOnline,
+                onBack = onBack,
+                onAudioCall = onAudioCall,
+                onVideoCall = onVideoCall
             )
         },
         bottomBar = {
             MessageComposer(
+                value = state.draftMessage,
+                onValueChange = viewModel::updateDraftMessage,
                 onSend = viewModel::sendMessage
             )
         }
@@ -126,84 +121,163 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
+            state = listState,
             contentPadding = PaddingValues(
                 horizontal = 14.dp,
-                vertical = 16.dp
+                vertical = 12.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            item {
-                SystemMessage(
-                    text = "Messages are end-to-end encrypted"
-                )
-            }
-
             items(
                 items = state.messages,
-                key = { it.id }
+                key = { message ->
+                    message.id
+                }
             ) { message ->
-                MessageBubble(
-                    message = message,
-                    onLongClick = {
-                        selectedMessage = message
-                    }
-                )
+                ChatMessageItem(message)
             }
         }
     }
+}
 
-    selectedMessage?.let { message ->
-        MessageActionSheet(
-            message = message,
-            onDismiss = {
-                selectedMessage = null
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatTopBar(
+    contactName: String,
+    isOnline: Boolean,
+    onBack: () -> Unit,
+    onAudioCall: () -> Unit,
+    onVideoCall: () -> Unit
+) {
+    Column {
+        TopAppBar(
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppAvatar(
+                        initials = createInitials(contactName),
+                        online = isOnline,
+                        size = 42.dp
+                    )
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = contactName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Text(
+                            text = if (isOnline) {
+                                "Online"
+                            } else {
+                                "Offline"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isOnline) {
+                                ChatGreen
+                            } else {
+                                SecondaryText
+                            }
+                        )
+                    }
+                }
             },
-            onReact = {
-                viewModel.addReaction(message.id, "❤️")
-                selectedMessage = null
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowBack,
+                        contentDescription = "Back"
+                    )
+                }
             },
-            onStar = {
-                viewModel.toggleStar(message.id)
-                selectedMessage = null
+            actions = {
+                IconButton(onClick = onAudioCall) {
+                    Icon(
+                        imageVector = Icons.Outlined.Call,
+                        contentDescription = "Audio call"
+                    )
+                }
+
+                IconButton(onClick = onVideoCall) {
+                    Icon(
+                        imageVector = Icons.Outlined.Videocam,
+                        contentDescription = "Video call"
+                    )
+                }
+
+                IconButton(onClick = {}) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = "More options"
+                    )
+                }
             },
-            onDelete = {
-                viewModel.deleteMessage(message.id)
-                selectedMessage = null
-            }
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White
+            )
         )
+
+        HorizontalDivider(color = DividerColor)
     }
 }
 
 @Composable
-private fun SystemMessage(
-    text: String
+private fun ChatMessageItem(
+    message: ChatMessageUi
+) {
+    when (message.type) {
+        ChatMessageType.SYSTEM -> {
+            SystemMessageChip(message.text)
+        }
+
+        ChatMessageType.TEXT -> {
+            TextMessageBubble(message)
+        }
+
+        ChatMessageType.IMAGE_GRID -> {
+            ImageGridMessage(message)
+        }
+
+        ChatMessageType.SAVED -> {
+            SavedMessageCard(message)
+        }
+    }
+}
+
+@Composable
+private fun SystemMessageChip(
+    message: String
 ) {
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            shape = CircleShape,
-            color = Color(0xFFECEDEF)
+            color = SystemBubble,
+            shape = CircleShape
         ) {
             Text(
-                text = text,
+                text = message,
                 modifier = Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 6.dp
+                    horizontal = 14.dp,
+                    vertical = 8.dp
                 ),
                 style = MaterialTheme.typography.labelSmall,
-                color = NexaSecondaryText
+                color = SecondaryText
             )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageBubble(
-    message: MessageUi,
-    onLongClick: () -> Unit
+private fun TextMessageBubble(
+    message: ChatMessageUi
 ) {
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -213,169 +287,198 @@ private fun MessageBubble(
             Alignment.CenterStart
         }
     ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 310.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 18.dp,
-                        topEnd = 18.dp,
-                        bottomStart = if (message.isMine) 18.dp else 5.dp,
-                        bottomEnd = if (message.isMine) 5.dp else 18.dp
-                    )
-                )
-                .background(
-                    if (message.isMine) {
-                        NexaLightGreen
-                    } else {
-                        NexaSurface
-                    }
-                )
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = onLongClick
-                )
-                .padding(10.dp)
+        Surface(
+            modifier = Modifier.widthIn(max = 285.dp),
+            color = if (message.isMine) {
+                ChatGreen
+            } else {
+                ReceivedBubble
+            },
+            shape = RoundedCornerShape(
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomStart = if (message.isMine) {
+                    18.dp
+                } else {
+                    4.dp
+                },
+                bottomEnd = if (message.isMine) {
+                    4.dp
+                } else {
+                    18.dp
+                }
+            ),
+            shadowElevation = if (message.isMine) {
+                1.dp
+            } else {
+                2.dp
+            }
         ) {
-            when (message.kind) {
-                MessageKind.TEXT -> {
-                    Text(
-                        text = message.text,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+            Column(
+                modifier = Modifier.padding(
+                    horizontal = 13.dp,
+                    vertical = 10.dp
+                )
+            ) {
+                Text(
+                    text = message.text,
+                    color = if (message.isMine) {
+                        Color.White
+                    } else {
+                        Color(0xFF202124)
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
-                MessageKind.IMAGE -> {
-                    Box(
-                        modifier = Modifier
-                            .width(250.dp)
-                            .height(160.dp)
-                            .clip(RoundedCornerShape(13.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        NexaDarkGreen,
-                                        NexaGreen,
-                                        Color(0xFF36C4A6)
-                                    )
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Image,
-                            contentDescription = null,
-                            modifier = Modifier.size(52.dp),
-                            tint = Color.White
-                        )
-                    }
-                }
+                if (message.time.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(5.dp))
 
-                MessageKind.FILE -> {
                     Row(
-                        modifier = Modifier
-                            .widthIn(min = 220.dp)
-                            .background(
-                                color = Color(0xFFF2F3F4),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Description,
-                            contentDescription = null,
-                            tint = NexaGreen
-                        )
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Text(
-                                text = message.fileName ?: "Document",
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            Text(
-                                text = message.fileSize.orEmpty(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NexaSecondaryText
-                            )
-                        }
-                    }
-                }
-
-                MessageKind.VOICE -> {
-                    Row(
-                        modifier = Modifier.width(220.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = NexaGreen
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PlayArrow,
-                                contentDescription = "Play",
-                                tint = Color.White,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            thickness = 3.dp,
-                            color = NexaGreen
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
                         Text(
-                            text = message.duration ?: "0:00",
-                            style = MaterialTheme.typography.labelSmall
+                            text = message.time,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (message.isMine) {
+                                Color.White.copy(alpha = 0.78f)
+                            } else {
+                                SecondaryText
+                            }
                         )
+
+                        if (message.isMine) {
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            Icon(
+                                imageVector = Icons.Outlined.DoneAll,
+                                contentDescription = "Delivered",
+                                modifier = Modifier.size(15.dp),
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.align(Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
+@Composable
+private fun ImageGridMessage(
+    message: ChatMessageUi
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Surface(
+            color = ReceivedBubble,
+            shape = RoundedCornerShape(18.dp),
+            shadowElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(7.dp)
             ) {
-                message.reaction?.let {
-                    Text(
-                        text = it,
-                        modifier = Modifier.padding(end = 5.dp)
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    MediaTile()
+                    MediaTile()
                 }
 
-                if (message.starred) {
+                Spacer(modifier = Modifier.height(5.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    MediaTile()
+                    MediaTile()
+                }
+
+                if (message.time.isNotBlank()) {
+                    Text(
+                        text = message.time,
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(top = 5.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SecondaryText
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaTile() {
+    Box(
+        modifier = Modifier
+            .size(82.dp)
+            .background(
+                color = Color(0xFFD8DADD),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clickable {
+                // Full-screen image preview will be added later.
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Image,
+            contentDescription = "Image",
+            modifier = Modifier.size(30.dp),
+            tint = SecondaryText
+        )
+    }
+}
+
+@Composable
+private fun SavedMessageCard(
+    message: ChatMessageUi
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Surface(
+            color = ReceivedBubble,
+            shape = RoundedCornerShape(18.dp),
+            shadowElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 150.dp)
+                    .padding(14.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Star,
-                        contentDescription = null,
-                        modifier = Modifier.size(13.dp),
-                        tint = NexaGreen
+                        contentDescription = "Saved",
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier.size(18.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = message.text,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
-                Text(
-                    text = message.time,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NexaSecondaryText
-                )
+                if (message.time.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                if (message.isMine) {
-                    Spacer(modifier = Modifier.width(3.dp))
-
-                    Icon(
-                        imageVector = Icons.Outlined.DoneAll,
-                        contentDescription = "Read",
-                        modifier = Modifier.size(15.dp),
-                        tint = NexaGreen
+                    Text(
+                        text = message.time,
+                        modifier = Modifier.align(Alignment.End),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SecondaryText
                     )
                 }
             }
@@ -385,177 +488,114 @@ private fun MessageBubble(
 
 @Composable
 private fun MessageComposer(
-    onSend: (String) -> Unit
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit
 ) {
-    var text by rememberSaveable {
-        mutableStateOf("")
-    }
-
     Surface(
-        color = NexaSurface,
+        color = Color.White,
         tonalElevation = 4.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
                 .padding(
                     horizontal = 10.dp,
                     vertical = 8.dp
                 ),
             verticalAlignment = Alignment.Bottom
         ) {
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Attachment"
-                )
-            }
-
             OutlinedTextField(
-                value = text,
-                onValueChange = {
-                    text = it
-                },
+                value = value,
+                onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
                 placeholder = {
-                    Text("Message")
+                    Text(text = "Message")
                 },
+                leadingIcon = {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Outlined.InsertEmoticon,
+                            contentDescription = "Emoji"
+                        )
+                    }
+                },
+                trailingIcon = {
+                    Row {
+                        IconButton(onClick = {}) {
+                            Icon(
+                                imageVector = Icons.Outlined.AttachFile,
+                                contentDescription = "Attach file"
+                            )
+                        }
+
+                        IconButton(onClick = {}) {
+                            Icon(
+                                imageVector = Icons.Outlined.CameraAlt,
+                                contentDescription = "Camera"
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(28.dp),
                 maxLines = 4,
-                shape = RoundedCornerShape(24.dp)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ChatGreen,
+                    unfocusedBorderColor = DividerColor,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            FloatingActionButton(
-                onClick = {
-                    if (text.isNotBlank()) {
-                        onSend(text)
-                        text = ""
-                    }
-                },
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                containerColor = NexaGreen
-            ) {
-                Icon(
-                    imageVector = if (text.isBlank()) {
-                        Icons.Outlined.Mic
-                    } else {
-                        Icons.Outlined.Send
+            Surface(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clickable {
+                        if (value.isNotBlank()) {
+                            onSend()
+                        }
                     },
-                    contentDescription = "Send",
-                    tint = Color.White
-                )
+                shape = CircleShape,
+                color = ChatGreen
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (value.isBlank()) {
+                            Icons.Outlined.Mic
+                        } else {
+                            Icons.Outlined.Send
+                        },
+                        contentDescription = if (value.isBlank()) {
+                            "Voice message"
+                        } else {
+                            "Send message"
+                        },
+                        tint = Color.White
+                    )
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MessageActionSheet(
-    message: MessageUi,
-    onDismiss: () -> Unit,
-    onReact: () -> Unit,
-    onStar: () -> Unit,
-    onDelete: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = NexaSurface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
-                .forEach { reaction ->
-                    TextButton(
-                        onClick = onReact,
-                        contentPadding = PaddingValues(4.dp)
-                    ) {
-                        Text(
-                            text = reaction,
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                    }
-                }
+private fun createInitials(name: String): String {
+    return name
+        .trim()
+        .split(" ")
+        .filter { word ->
+            word.isNotBlank()
         }
-
-        HorizontalDivider(color = NexaDivider)
-
-        ActionRow(Icons.Outlined.Reply, "Reply", onDismiss)
-        ActionRow(Icons.Outlined.AddReaction, "React", onReact)
-        ActionRow(Icons.Outlined.ContentCopy, "Copy", onDismiss)
-        ActionRow(Icons.Outlined.Forward, "Forward", onDismiss)
-
-        if (message.isMine) {
-            ActionRow(Icons.Outlined.Edit, "Edit", onDismiss)
+        .take(2)
+        .joinToString("") { word ->
+            word.firstOrNull()
+                ?.uppercase()
+                .orEmpty()
         }
-
-        ActionRow(Icons.Outlined.StarBorder, "Star", onStar)
-        ActionRow(Icons.Outlined.SaveAlt, "Save media", onDismiss)
-        ActionRow(Icons.Outlined.Download, "Download file", onDismiss)
-        ActionRow(Icons.Outlined.DeleteOutline, "Delete for me", onDelete)
-
-        if (message.isMine) {
-            ActionRow(
-                icon = Icons.Outlined.DeleteForever,
-                label = "Delete for everyone",
-                onClick = onDelete,
-                danger = true
-            )
+        .ifBlank {
+            "U"
         }
-
-        ActionRow(Icons.Outlined.Info, "Message information", onDismiss)
-
-        ActionRow(
-            icon = Icons.Outlined.Flag,
-            label = "Report",
-            onClick = onDismiss,
-            danger = true
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun ActionRow(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    danger: Boolean = false
-) {
-    ListItem(
-        modifier = Modifier.fillMaxWidth(),
-        headlineContent = {
-            Text(
-                text = label,
-                color = if (danger) {
-                    NexaDanger
-                } else {
-                    NexaPrimaryText
-                }
-            )
-        },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (danger) {
-                    NexaDanger
-                } else {
-                    NexaPrimaryText
-                }
-            )
-        },
-        colors = ListItemDefaults.colors(
-            containerColor = NexaSurface
-        )
-    )
 }

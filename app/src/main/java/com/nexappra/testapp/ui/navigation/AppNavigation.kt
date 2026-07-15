@@ -1,16 +1,21 @@
 package com.nexappra.testapp.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.nexappra.testapp.ui.auth.LoadingGate
 import com.nexappra.testapp.ui.auth.LoginScreen
 import com.nexappra.testapp.ui.auth.RegisterScreen
+import com.nexappra.testapp.ui.chat.ChatScreen
 import com.nexappra.testapp.ui.home.MainHomeScreen
+import com.nexappra.testapp.ui.newchat.NewChatScreen
 
 @Composable
 fun AppNavigation() {
@@ -21,21 +26,19 @@ fun AppNavigation() {
         navController = navController,
         startDestination = Routes.AuthCheck.route
     ) {
-
-        composable(
-            route = Routes.AuthCheck.route
-        ) {
-            val viewModel: AuthCheckViewModel = hiltViewModel()
+        composable(Routes.AuthCheck.route) {
+            val viewModel: AuthCheckViewModel =
+                hiltViewModel()
 
             val destinationState =
-                viewModel.destinationRoute.collectAsStateWithLifecycle()
+                viewModel.destinationRoute
+                    .collectAsStateWithLifecycle()
 
-            val destinationRoute: String? =
+            val destinationRoute =
                 destinationState.value
 
             LaunchedEffect(destinationRoute) {
                 destinationRoute?.let { route ->
-
                     navController.navigate(route) {
                         popUpTo(Routes.AuthCheck.route) {
                             inclusive = true
@@ -49,20 +52,16 @@ fun AppNavigation() {
             LoadingGate()
         }
 
-        composable(
-            route = Routes.Login.route
-        ) {
+        composable(Routes.Login.route) {
             LoginScreen(
                 onOpenRegister = {
                     navController.navigate(
-                        route = Routes.Register.route
-                    ) {
-                        launchSingleTop = true
-                    }
+                        Routes.Register.route
+                    )
                 },
                 onLoginSuccess = {
                     navController.navigate(
-                        route = Routes.Home.route
+                        Routes.Home.route
                     ) {
                         popUpTo(Routes.Login.route) {
                             inclusive = true
@@ -74,16 +73,14 @@ fun AppNavigation() {
             )
         }
 
-        composable(
-            route = Routes.Register.route
-        ) {
+        composable(Routes.Register.route) {
             RegisterScreen(
                 onBackToLogin = {
                     navController.popBackStack()
                 },
                 onRegisterSuccess = {
                     navController.navigate(
-                        route = Routes.Home.route
+                        Routes.Home.route
                     ) {
                         popUpTo(Routes.Register.route) {
                             inclusive = true
@@ -95,19 +92,24 @@ fun AppNavigation() {
             )
         }
 
-        composable(
-            route = Routes.Home.route
-        ) {
+        composable(Routes.Home.route) {
             MainHomeScreen(
                 onOpenChat = { contactId, contactName ->
-                    // Chat navigation will be connected later.
+                    navController.navigate(
+                        Routes.Chat.createRoute(
+                            contactId = contactId,
+                            contactName = contactName
+                        )
+                    )
                 },
                 onNewChat = {
-                    // New-chat navigation will be connected later.
+                    navController.navigate(
+                        Routes.NewChat.route
+                    )
                 },
                 onLoggedOut = {
                     navController.navigate(
-                        route = Routes.Login.route
+                        Routes.Login.route
                     ) {
                         popUpTo(Routes.Home.route) {
                             inclusive = true
@@ -115,6 +117,64 @@ fun AppNavigation() {
 
                         launchSingleTop = true
                     }
+                }
+            )
+        }
+
+        composable(Routes.NewChat.route) {
+            NewChatScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onContactSelected = {
+                        contactId,
+                        contactName ->
+
+                    navController.navigate(
+                        Routes.Chat.createRoute(
+                            contactId = contactId,
+                            contactName = contactName
+                        )
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = Routes.Chat.route,
+            arguments = listOf(
+                navArgument("contactId") {
+                    type = NavType.StringType
+                },
+                navArgument("contactName") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val contactId = Uri.decode(
+                backStackEntry.arguments
+                    ?.getString("contactId")
+                    .orEmpty()
+            )
+
+            val contactName = Uri.decode(
+                backStackEntry.arguments
+                    ?.getString("contactName")
+                    .orEmpty()
+            )
+
+            ChatScreen(
+                contactId = contactId,
+                contactName = contactName,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onAudioCall = {
+                    // Audio call screen will be connected here.
+                },
+                onVideoCall = {
+                    // Video call screen will be connected here.
                 }
             )
         }
