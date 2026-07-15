@@ -1,4 +1,4 @@
-package com.nexappra.testapp.ui.home
+package com.nexappra.testapp.notification
 
 import android.Manifest
 import android.content.ClipData

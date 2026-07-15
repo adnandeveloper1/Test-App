@@ -21,19 +21,18 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun onEmailChange(email: String) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 email = email,
                 emailError = null,
-                errorMessage = null,
-                passwordResetSuccess = null
+                errorMessage = null
             )
         }
     }
 
     fun onPasswordChange(password: String) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 password = password,
                 passwordError = null,
                 errorMessage = null
@@ -42,24 +41,60 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onRememberPasswordChange(rememberPassword: Boolean) {
-        _uiState.update { it.copy(rememberPassword = rememberPassword) }
+        _uiState.update { currentState ->
+            currentState.copy(
+                rememberPassword = rememberPassword
+            )
+        }
     }
 
     fun login() {
-        if (_uiState.value.isLoading || !validateLoginFields()) {
+        if (_uiState.value.isLoading) return
+
+        val email = _uiState.value.email.trim()
+        val password = _uiState.value.password
+
+        val emailError = when {
+            email.isBlank() -> "Email is required."
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+                "Enter a valid email address."
+
+            else -> null
+        }
+
+        val passwordError = when {
+            password.isBlank() -> "Password is required."
+            password.length < 6 ->
+                "Password must contain at least 6 characters."
+
+            else -> null
+        }
+
+        if (emailError != null || passwordError != null) {
+            _uiState.update { currentState ->
+                currentState.copy(
+                    emailError = emailError,
+                    passwordError = passwordError
+                )
+            }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { currentState ->
+                currentState.copy(
+                    isLoading = true,
+                    errorMessage = null
+                )
+            }
 
             authRepository.login(
-                email = _uiState.value.email.trim(),
-                password = _uiState.value.password
+                email = email,
+                password = password
             ).fold(
                 onSuccess = {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { currentState ->
+                        currentState.copy(
                             isLoading = false,
                             isSuccess = true,
                             successMessage = "Login successful."
@@ -67,10 +102,11 @@ class LoginViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { currentState ->
+                        currentState.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Unable to log in right now."
+                            errorMessage = error.message
+                                ?: "Unable to log in."
                         )
                     }
                 }
@@ -79,33 +115,46 @@ class LoginViewModel @Inject constructor(
     }
 
     fun resetPassword() {
-        if (_uiState.value.isLoading || !validateEmailForReset()) {
+        if (_uiState.value.isLoading) return
+
+        val email = _uiState.value.email.trim()
+
+        if (
+            email.isBlank() ||
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches()
+        ) {
+            _uiState.update { currentState ->
+                currentState.copy(
+                    emailError = "Enter a valid email address first."
+                )
+            }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
+            _uiState.update { currentState ->
+                currentState.copy(
                     isLoading = true,
-                    errorMessage = null,
-                    passwordResetSuccess = null
+                    errorMessage = null
                 )
             }
 
-            authRepository.resetPassword(_uiState.value.email.trim()).fold(
+            authRepository.sendPasswordResetEmail(email).fold(
                 onSuccess = {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { currentState ->
+                        currentState.copy(
                             isLoading = false,
-                            passwordResetSuccess = "A password reset email has been sent."
+                            passwordResetSuccess =
+                                "Password reset email has been sent."
                         )
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { currentState ->
+                        currentState.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Unable to send a reset email right now."
+                            errorMessage = error.message
+                                ?: "Unable to send password reset email."
                         )
                     }
                 }
@@ -114,55 +163,19 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onNavigationHandled() {
-        _uiState.update { it.copy(isSuccess = false, successMessage = null) }
+        _uiState.update { currentState ->
+            currentState.copy(
+                isSuccess = false,
+                successMessage = null
+            )
+        }
     }
 
     fun clearPasswordResetSuccess() {
-        _uiState.update { it.copy(passwordResetSuccess = null) }
-    }
-
-    private fun validateLoginFields(): Boolean {
-        val email = _uiState.value.email.trim()
-        val password = _uiState.value.password
-        var emailError: String? = null
-        var passwordError: String? = null
-
-        if (email.isBlank()) {
-            emailError = "Email is required."
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailError = "Please enter a valid email address."
-        }
-
-        if (password.isBlank()) {
-            passwordError = "Password is required."
-        }
-
-        _uiState.update {
-            it.copy(
-                emailError = emailError,
-                passwordError = passwordError,
-                errorMessage = null
+        _uiState.update { currentState ->
+            currentState.copy(
+                passwordResetSuccess = null
             )
         }
-
-        return emailError == null && passwordError == null
-    }
-
-    private fun validateEmailForReset(): Boolean {
-        val email = _uiState.value.email.trim()
-        val emailError = when {
-            email.isBlank() -> "Email is required."
-            !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Please enter a valid email address."
-            else -> null
-        }
-
-        _uiState.update {
-            it.copy(
-                emailError = emailError,
-                errorMessage = null
-            )
-        }
-
-        return emailError == null
     }
 }

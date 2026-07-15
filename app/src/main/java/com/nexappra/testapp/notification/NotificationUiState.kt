@@ -1,4 +1,4 @@
-package com.nexappra.testapp.ui.home
+package com.nexappra.testapp.notification
 
 data class NotificationUiState(
     val isLoading: Boolean = false,
